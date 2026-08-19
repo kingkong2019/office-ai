@@ -2,6 +2,8 @@
 
 **The world's first full-featured open-source AI Office suite.**
 
+[English](./README.md) · [中文](./README.zh-CN.md)
+
 This repository ([kingkong2019/office-ai](https://github.com/kingkong2019/office-ai))
 is an archived fork of upstream
 [genspark-ai/genoffice](https://github.com/genspark-ai/genoffice) with local
