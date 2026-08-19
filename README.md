@@ -1,7 +1,7 @@
 # Office AI
 
-**AI-native office suite** — a public fork of [GenOffice](https://github.com/genspark-ai/genoffice)
-with bring-your-own LLM config and offline-friendly slide page generation.
+**AI-native office suite** — a public fork of [GenOffice](https://github.com/genspark-ai/genoffice).
+See **[Why Office AI](#why-office-ai-highlights)** for numbered highlights (BYO LLM, local slides, offline docs, and more).
 
 [English](./README.md) · [中文](./README.zh-CN.md)
 
@@ -11,16 +11,20 @@ with bring-your-own LLM config and offline-friendly slide page generation.
 **Repo:** [kingkong2019/office-ai](https://github.com/kingkong2019/office-ai)  
 **Upstream:** [genspark-ai/genoffice](https://github.com/genspark-ai/genoffice) · [genoffice.ai](https://genoffice.ai/) · [Demo](https://www.youtube.com/watch?v=B2pLdMX95v4)
 
-Office AI keeps the GenOffice engine stack (Docs / Sheets / Slides / PDF / Markdown
-in one Electron shell) and adds:
+## Why Office AI (highlights)
 
-- **Custom AI providers** via `ai-api.config.json` (OpenAI-compatible, Anthropic, custom — no Genspark login required for chat)
-- **Local slide page generation** when cloud `slide_generate` is unavailable
+1. **Bring your own LLM** — Point Docs / Sheets / Slides at OpenAI-compatible, Anthropic, or any custom OpenAI-style gateway via one `ai-api.config.json`. Chat works **without** a Genspark login.
+2. **Local slide page generation** — When cloud `slide_generate` is unavailable, `generate_deck` still builds pages locally from the planned title/brief, so decks are not blocked on cloud layout.
+3. **True offline document work** — Open / edit / save `.docx` / `.xlsx` / `.pptx` / PDF / Markdown entirely on your machine; pair with a LAN or localhost model for AI that never leaves your network.
+4. **Byte-preserving Office fidelity** — Only dirty parts are rewritten; untouched OOXML bytes survive the round trip, so files stay friendly to Microsoft Office.
+5. **Real PDF editing** — Rewrite page content streams (text + images) with original fonts — not stamp-over annotations.
+6. **One suite, five editors** — Word / Excel / PowerPoint / PDF / Markdown in a single Electron shell, sharing the same AI panel and agent loop.
+7. **Upstream-compatible, fork-branded** — Keep Genspark cloud tools when you want them; keep `@genoffice/*` packages for easy sync; ship as **Office AI** (installers, window title, GitHub links).
 
 Internal npm package names remain `@genoffice/*` for easier upstream sync. The
 **product display name**, installers, GitHub links, and default folders use **Office AI**.
 
-## Features
+## Features (inherited engine)
 
 - **Real PDF editing** — retype text and edit images in the page itself, original fonts preserved.
 - **Microsoft Word–compatible, byte-preserving `.docx` editing** — only what you touched changes.
@@ -29,12 +33,8 @@ Internal npm package names remain `@genoffice/*` for easier upstream sync. The
 - **PowerPoint-compatible presentations** — in-house `.pptx` engine with masters, layouts, smart guides.
 - **Markdown to Word, fully local** — same OOXML engine, no Pandoc, no cloud.
 - **AI that edits documents** — block-level edits with snapshots and diffs.
-- **Bring your own LLM** — configure endpoints in `ai-api.config.json`.
-- **Local slide page generation** — `generate_deck` works without Genspark cloud layout.
 - **Agent tools** — web/image search, image generation, media analysis (Genspark account when using those tools).
-- **Light / dark / system themes.**
-- **macOS, Windows, Linux.**
-- **Free & open-source (Apache-2.0).**
+- **Light / dark / system themes · macOS / Windows / Linux · Apache-2.0.**
 
 ## Download
 
