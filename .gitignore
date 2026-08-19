@@ -33,3 +33,6 @@ electron-builder.env
 __pycache__/
 /notes/
 /MEMORY.md
+
+# Local AI API overrides (may contain secrets); see ai-api.config.example.json
+/ai-api.config.json

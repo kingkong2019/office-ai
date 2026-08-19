@@ -1,6 +1,12 @@
 import { aiFetch } from './fetch'
 import { httpBodyDetail } from './http-error'
-import { GENSPARK_LLM_BASE_URLS, gensparkAttributionHeaders } from './providers'
+import {
+  GENSPARK_LLM_BASE_URLS,
+  PROVIDER_BASE_URLS,
+  applyAiApiConfigEndpoints,
+  gensparkAttributionHeaders,
+  resolveProviderBaseUrl,
+} from './providers'
 import type { AiChatResponse, AiProviderConfig, AiProviderId } from './types'
 import { AI_CHAT_RESPONSE_TIMEOUT_MS, createStreamWatchdog, type StreamWatchdog } from './watchdog'
 
@@ -116,11 +122,6 @@ async function chatOpenAiCompatible(
   return { ok: true, content }
 }
 
-const OPENAI_COMPATIBLE_BASE_URLS: Partial<Record<AiProviderId, string>> = {
-  deepseek: 'https://api.deepseek.com/v1',
-  openai: 'https://api.openai.com/v1',
-}
-
 /** route a one-shot (non-streaming, non-tool-calling) chat call by provider id */
 export async function chatForProvider(
   provider: AiProviderId,
@@ -131,6 +132,7 @@ export async function chatForProvider(
 ): Promise<AiChatResponse> {
   // non-streaming: the server generates the full answer before the headers arrive,
   // so the connect phase gets the long budget; the body read then gets the idle budget
+  applyAiApiConfigEndpoints()
   const wd = createStreamWatchdog(signal, AI_CHAT_RESPONSE_TIMEOUT_MS)
   return wd.guard(() => {
     switch (provider) {
@@ -143,25 +145,42 @@ export async function chatForProvider(
         }
         return chatOpenAiCompatible(wd, GENSPARK_LLM_BASE_URLS.openai, config, system, user)
       case 'anthropic':
-        return chatAnthropic(wd, config, system, user)
-      case 'gemini':
-        return chatGemini(wd, config, system, user)
-      case 'deepseek':
-      case 'openai':
-        return chatOpenAiCompatible(
+        return chatAnthropic(
           wd,
-          OPENAI_COMPATIBLE_BASE_URLS[provider]!,
           config,
           system,
           user,
+          resolveProviderBaseUrl('anthropic', config.baseUrl) ?? PROVIDER_BASE_URLS.anthropic,
         )
-      case 'custom':
-        if (!config.baseUrl)
+      case 'gemini':
+        return chatGemini(
+          wd,
+          config,
+          system,
+          user,
+          resolveProviderBaseUrl('gemini', config.baseUrl) ?? PROVIDER_BASE_URLS.gemini,
+        )
+      case 'deepseek':
+      case 'openai': {
+        const baseUrl = resolveProviderBaseUrl(provider, config.baseUrl)
+        if (!baseUrl) {
+          return Promise.resolve({
+            ok: false as const,
+            error: `No base URL configured for provider: ${provider}`,
+          })
+        }
+        return chatOpenAiCompatible(wd, baseUrl, config, system, user)
+      }
+      case 'custom': {
+        const baseUrl = resolveProviderBaseUrl('custom', config.baseUrl)
+        if (!baseUrl) {
           return Promise.resolve({
             ok: false as const,
             error: 'A custom provider requires a Base URL',
           })
-        return chatOpenAiCompatible(wd, config.baseUrl, config, system, user)
+        }
+        return chatOpenAiCompatible(wd, baseUrl, config, system, user)
+      }
       default:
         return Promise.resolve({ ok: false as const, error: `Unknown provider: ${provider}` })
     }

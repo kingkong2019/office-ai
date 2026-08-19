@@ -39,8 +39,8 @@ import {
   AiCreditsError,
   AiTimeoutError,
   chatForProvider,
-  defaultAiSettings,
-  resolveAiSettings,
+  loadAiApiConfig,
+  loadResolvedAiSettings,
   setRescueFetch,
   streamForProvider,
   type AiChatRequest,
@@ -2484,12 +2484,20 @@ const activeAiStreams = new Map<string, AbortController>()
  * sheets' standalone AI handlers use the same channel names.
  */
 export function registerAiIpc(): void {
+  // Monorepo root (apps/shell → ../..) so root ai-api.config.json is found in dev
+  // even when Electron's cwd is apps/shell.
+  const repoRoot = join(app.getAppPath(), '..', '..')
+  loadAiApiConfig({
+    userDataDir: app.getPath('userData'),
+    searchRoots: [repoRoot],
+  })
+
   ipcMain.handle('ai:get-settings', (): AiSettings => {
     const stored = readJson<Partial<AiSettings> & LegacyAiSettings>(SETTINGS_PATH(), {})
-    const settings = resolveAiSettings(stored, defaultAiSettings())
-    // AI features all go through Genspark (gsk login); legacy settings with another provider are reset
-    settings.provider = 'genspark'
-    return settings
+    return loadResolvedAiSettings(stored, {
+      userDataDir: app.getPath('userData'),
+      searchRoots: [repoRoot],
+    })
   })
 
   // Genspark account (gsk login state): auth source for AI features; the frontend uses it to prompt login when logged out

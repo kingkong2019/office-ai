@@ -1,110 +1,99 @@
-import type { AiProviderId, AiProviderMeta, AiSettings, LegacyAiSettings } from './types'
+import { getAiApiConfig, providerEndpoint } from './config'
+import { loadAiApiConfig } from './config-node'
+import {
+  AI_PROVIDERS,
+  BUILTIN_AI_PROVIDERS,
+  GENSPARK_LLM_BASE_URLS,
+  PROVIDER_BASE_URLS,
+} from './providers-meta'
+import type { AiProviderId, AiSettings, LegacyAiSettings } from './types'
+
+export {
+  AI_PROVIDERS,
+  GENSPARK_AGENT_TYPE,
+  GENSPARK_LLM_BASE_URLS,
+  PROVIDER_BASE_URLS,
+  gensparkAttributionHeaders,
+} from './providers-meta'
 
 /**
- * Genspark server-side LLM proxy endpoints. All three protocols share the
- * api_key from the gsk login; model ids follow the proxy's own naming scheme,
- * which differs from the official vendor ids.
+ * Apply endpoint / model overrides from the loaded ai-api.config.json onto the
+ * mutable GENSPARK_LLM_BASE_URLS / PROVIDER_BASE_URLS / AI_PROVIDERS tables.
+ * Safe to call repeatedly (e.g. after reload).
  */
-export const GENSPARK_LLM_BASE_URLS = {
-  anthropic: 'https://www.genspark.ai/api/anthropic',
-  gemini: 'https://www.genspark.ai/api/llm_proxy/gemini/v1beta',
-  openai: 'https://www.genspark.ai/api/llm_proxy/v1',
-} as const
+export function applyAiApiConfigEndpoints(): void {
+  const cfg = getAiApiConfig()
 
-/**
- * Splits GenOffice usage out of the proxy's default "Claw" billing bucket
- * (the backend attributes gsk-key traffic by X-Agent-Type). Only sent to the
- * Genspark proxy — never to direct vendor APIs.
- */
-export const GENSPARK_AGENT_TYPE = 'genoffice'
+  // reset to builtins first so a reload that removes keys restores defaults
+  GENSPARK_LLM_BASE_URLS.anthropic = 'https://www.genspark.ai/api/anthropic'
+  GENSPARK_LLM_BASE_URLS.gemini = 'https://www.genspark.ai/api/llm_proxy/gemini/v1beta'
+  GENSPARK_LLM_BASE_URLS.openai = 'https://www.genspark.ai/api/llm_proxy/v1'
+  PROVIDER_BASE_URLS.anthropic = 'https://api.anthropic.com'
+  PROVIDER_BASE_URLS.gemini = 'https://generativelanguage.googleapis.com/v1beta'
+  PROVIDER_BASE_URLS.deepseek = 'https://api.deepseek.com/v1'
+  PROVIDER_BASE_URLS.openai = 'https://api.openai.com/v1'
 
-export function gensparkAttributionHeaders(baseUrl?: string): Record<string, string> {
-  return baseUrl?.startsWith('https://www.genspark.ai')
-    ? { 'X-Agent-Type': GENSPARK_AGENT_TYPE }
-    : {}
+  for (let i = 0; i < AI_PROVIDERS.length; i++) {
+    const builtin = BUILTIN_AI_PROVIDERS[i]!
+    const live = AI_PROVIDERS[i]!
+    live.label = builtin.label
+    live.defaultModel = builtin.defaultModel
+    live.models = [...builtin.models]
+    live.keyPlaceholder = builtin.keyPlaceholder
+    live.needsBaseUrl = builtin.needsBaseUrl
+  }
+
+  const gs = cfg.providers.genspark
+  if (gs?.baseUrls) {
+    if (gs.baseUrls.anthropic) GENSPARK_LLM_BASE_URLS.anthropic = gs.baseUrls.anthropic
+    if (gs.baseUrls.gemini) GENSPARK_LLM_BASE_URLS.gemini = gs.baseUrls.gemini
+    if (gs.baseUrls.openai) GENSPARK_LLM_BASE_URLS.openai = gs.baseUrls.openai
+  }
+
+  for (const id of ['anthropic', 'gemini', 'deepseek', 'openai', 'custom'] as const) {
+    const baseUrl = cfg.providers[id]?.baseUrl
+    if (baseUrl) PROVIDER_BASE_URLS[id] = baseUrl
+  }
+
+  for (const meta of AI_PROVIDERS) {
+    const override = cfg.providers[meta.id]
+    if (!override) continue
+    if (override.label) meta.label = override.label
+    if (override.defaultModel !== undefined) meta.defaultModel = override.defaultModel
+    if (override.models) meta.models = [...override.models]
+  }
 }
-
-export const AI_PROVIDERS: AiProviderMeta[] = [
-  {
-    id: 'genspark',
-    label: 'Genspark',
-    models: [
-      'claude-opus-4-7',
-      'claude-opus-4-8',
-      'claude-sonnet-4-6',
-      'claude-haiku-4-5',
-      'gpt-5.2',
-      'gemini-3.1-pro-preview',
-      'gemini-3-flash-preview',
-    ],
-    defaultModel: 'claude-opus-4-7',
-    keyPlaceholder: 'Not required - sign in to Genspark',
-  },
-  {
-    id: 'anthropic',
-    label: 'Claude',
-    models: [
-      'claude-sonnet-5',
-      'claude-opus-4-8',
-      'claude-opus-4-7',
-      'claude-sonnet-4-6',
-      'claude-opus-4-6',
-      'claude-opus-4-5-20251101',
-      'claude-haiku-4-5-20251001',
-      'claude-sonnet-4-5-20250929',
-    ],
-    defaultModel: 'claude-opus-4-7',
-    keyPlaceholder: 'sk-ant-api03-...',
-  },
-  {
-    id: 'gemini',
-    label: 'Gemini',
-    models: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash'],
-    defaultModel: 'gemini-2.5-flash',
-    keyPlaceholder: 'AIza...',
-  },
-  {
-    id: 'deepseek',
-    label: 'DeepSeek',
-    models: ['deepseek-chat', 'deepseek-reasoner'],
-    defaultModel: 'deepseek-chat',
-    keyPlaceholder: 'sk-...',
-  },
-  {
-    id: 'openai',
-    label: 'OpenAI',
-    models: ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4o', 'gpt-4o-mini'],
-    defaultModel: 'gpt-4.1-mini',
-    keyPlaceholder: 'sk-...',
-  },
-  {
-    id: 'custom',
-    label: 'Custom',
-    models: [],
-    defaultModel: '',
-    keyPlaceholder: 'API Key',
-    needsBaseUrl: true,
-  },
-]
 
 /**
  * Fresh settings with every provider's default model and an empty key,
  * except providers listed in `defaultApiKeys` (e.g. an app-specific
  * preconfigured Anthropic key). Callers own that policy; this package
- * has no hardcoded keys.
+ * has no hardcoded keys. Values from ai-api.config.json win as defaults.
  */
 export function defaultAiSettings(
   defaultApiKeys?: Partial<Record<AiProviderId, string>>,
 ): AiSettings {
+  applyAiApiConfigEndpoints()
+  const cfg = getAiApiConfig()
   const providers = {} as AiSettings['providers']
   for (const meta of AI_PROVIDERS) {
+    const override = providerEndpoint(meta.id)
+    const apiKey = override?.apiKey ?? defaultApiKeys?.[meta.id] ?? ''
+    const model = override?.defaultModel ?? meta.defaultModel
+    let baseUrl: string | undefined
+    if (meta.needsBaseUrl || meta.id === 'custom') {
+      baseUrl = override?.baseUrl ?? PROVIDER_BASE_URLS.custom ?? ''
+    } else if (override?.baseUrl) {
+      // surface configured base URL in settings for non-custom providers too
+      baseUrl = override.baseUrl
+    }
     providers[meta.id] = {
-      apiKey: defaultApiKeys?.[meta.id] ?? '',
-      model: meta.defaultModel,
-      baseUrl: meta.needsBaseUrl ? '' : undefined,
+      apiKey,
+      model,
+      ...(baseUrl !== undefined ? { baseUrl } : {}),
     }
   }
-  return { provider: 'genspark', providers }
+  return { provider: cfg.defaultProvider, providers }
 }
 
 /**
@@ -127,8 +116,63 @@ export function resolveAiSettings(
     }
     return defaults
   }
+  const providers = { ...defaults.providers }
+  for (const [id, override] of Object.entries(stored.providers) as [
+    AiProviderId,
+    AiSettings['providers'][AiProviderId],
+  ][]) {
+    const base = providers[id] ?? { apiKey: '', model: '' }
+    providers[id] = {
+      ...base,
+      ...override,
+      // Keep config/default secrets when the settings file has an empty key
+      apiKey: override.apiKey?.trim() ? override.apiKey : base.apiKey,
+      model: override.model?.trim() ? override.model : base.model,
+      baseUrl: override.baseUrl?.trim() ? override.baseUrl : base.baseUrl,
+    }
+  }
   return {
     provider: stored.provider ?? defaults.provider,
-    providers: { ...defaults.providers, ...stored.providers },
+    providers,
   }
+}
+
+/**
+ * App-facing settings load: pick up ai-api.config.json (env / userData / cwd),
+ * merge with persisted ai-settings.json, and only force provider=genspark when
+ * no config opted into another default.
+ */
+export function loadResolvedAiSettings(
+  stored: Partial<AiSettings> & LegacyAiSettings,
+  options?: {
+    userDataDir?: string
+    searchRoots?: string[]
+    defaultApiKeys?: Partial<Record<AiProviderId, string>>
+  },
+): AiSettings {
+  loadAiApiConfig({ userDataDir: options?.userDataDir, searchRoots: options?.searchRoots })
+  const cfg = getAiApiConfig()
+  const settings = resolveAiSettings(stored, defaultAiSettings(options?.defaultApiKeys))
+  if (!cfg.allowNonGensparkProvider) {
+    // Product default: AI features go through Genspark (gsk login)
+    settings.provider = 'genspark'
+  } else if (
+    cfg.defaultProvider !== 'genspark' &&
+    (!stored.provider || stored.provider === 'genspark')
+  ) {
+    // Config opted into a non-Genspark default; don't keep a stale genspark preference
+    settings.provider = cfg.defaultProvider
+  }
+  return settings
+}
+
+/** Base URL used for a direct (non-genspark) provider call. */
+export function resolveProviderBaseUrl(
+  provider: AiProviderId,
+  configBaseUrl?: string,
+): string | undefined {
+  if (configBaseUrl?.trim()) return configBaseUrl.trim()
+  applyAiApiConfigEndpoints()
+  if (provider === 'genspark') return undefined
+  return PROVIDER_BASE_URLS[provider]
 }

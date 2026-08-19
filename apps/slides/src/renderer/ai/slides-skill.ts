@@ -106,13 +106,12 @@ export interface DeckAccess {
    * On search failure returns an empty array (fail-open; doesn't block the main generation path).
    */
   searchImages?(query: string, maxResults: number): Promise<string[]>
-  /** Whether cloud single-page generation is available (kill switch + gsk login state) */
+  /** Whether page generation is available (kill switch; cloud when gsk logged in, else local) */
   isCloudPageGenEnabled?(): Promise<boolean>
   /**
-   * Cloud single-page generation (gsk slide_generate), used by generate_deck's self-driven
-   * pipeline: given the unified style + this page's brief/layout/images, the cloud service
-   * writes the HTML and converts it to a one-slide pptx. Returns a marker string that goes
-   * into a generateFromHtml pagesHtml slot.
+   * Single-page generation used by generate_deck / regenerate_slide.
+   * Given style + brief/layout/images, returns a marker for generateFromHtml.
+   * Uses Genspark cloud when available; otherwise a local layout fallback (no login).
    */
   generatePageCloud?(args: {
     pageIndex: number
@@ -2360,7 +2359,7 @@ async function executeTool(
       if (!access.generatePageCloud || !(await access.isCloudPageGenEnabled?.().catch(() => false)))
         return fail(
           t('aiFailGenDeck'),
-          'Cloud slide generation is unavailable — sign in to Genspark (gsk) first',
+          'Slide page generation is unavailable in this build. Ask the user to fully restart the app (stop npm run dev and start again). Do NOT tell them to enable GENOFFICE_CLOUD_SLIDE or log in to Genspark — local generation does not need either.',
         )
       if (!access.generateFromHtml)
         return fail(

@@ -1,0 +1,29 @@
+{
+  "defaultProvider": "custom",
+  "allowNonGensparkProvider": true,
+  "providers": {
+    "custom": {
+      "label": "My LLM",
+      "baseUrl": "http://127.0.0.1:8000/v1",
+      "apiKey": "sk-your-key",
+      "defaultModel": "my-model",
+      "models": ["my-model", "my-model-fast"]
+    },
+    "openai": {
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKey": "",
+      "defaultModel": "gpt-4.1-mini"
+    },
+    "anthropic": {
+      "baseUrl": "https://api.anthropic.com",
+      "defaultModel": "claude-opus-4-7"
+    },
+    "genspark": {
+      "baseUrls": {
+        "anthropic": "https://www.genspark.ai/api/anthropic",
+        "gemini": "https://www.genspark.ai/api/llm_proxy/gemini/v1beta",
+        "openai": "https://www.genspark.ai/api/llm_proxy/v1"
+      }
+    }
+  }
+}

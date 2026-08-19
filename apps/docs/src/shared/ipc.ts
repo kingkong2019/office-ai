@@ -39,7 +39,8 @@ export type {
   AiStreamRequest,
   GenSparkAccountStatus,
 } from '@genoffice/ai-provider'
-export { AI_PROVIDERS } from '@genoffice/ai-provider'
+// Browser-safe provider list (avoid pulling Node config-node via package barrel)
+export { AI_PROVIDERS } from '../../../../packages/ai-provider/src/providers-meta'
 
 // ---- agent protocol: canonical types live in @genoffice/agent-core ----
 

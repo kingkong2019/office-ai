@@ -926,13 +926,15 @@ export function AiPanel({
       },
       isCloudPageGenEnabled: async () => {
         try {
-          return !!(await window.slidesApi.cloudGenStatus())?.enabled
+          const status = await window.slidesApi.cloudGenStatus()
+          // Default on: only an explicit enabled:false disables generation
+          return status?.enabled !== false
         } catch {
-          return false
+          // Fail-open so a stale preload/IPC blip doesn't block local generation
+          return true
         }
       },
-      // Cloud single-page generation (gsk slide_generate): the cloud service owns HTML writing +
-      // pptx conversion; the deck-level style/outline stay local.
+      // Page generation: Genspark cloud when logged in; otherwise local pptx layout (no gsk required)
       generatePageCloud: async (args) => {
         try {
           const briefParts = [args.brief]
@@ -1262,8 +1264,8 @@ export function AiPanel({
             }
             return next
           })
-          // Signed-out failures get an inline sign-in button; detected via
-          // gsk status rather than matching the localized error text
+          // Only prompt Genspark login when the active provider is genspark
+          if (settingsRef.current.provider !== 'genspark') return
           void window.slidesApi
             .aiGskStatus()
             .then((status) => {

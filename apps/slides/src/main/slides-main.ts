@@ -25,10 +25,12 @@ import { existsSync, mkdirSync } from 'node:fs'
 import { userInfo } from 'node:os'
 import { dirname, join } from 'node:path'
 import { gskApiKey, gskSlideGenerate, setGskProxyUrl } from '@genoffice/ai-search'
+import { buildLocalSlidePptx } from './local-page-generate'
 import {
   appMenuLabels,
   configuredDefaultSaveDir,
   contextMenuLabels,
+  fetchRemoteImage,
   installContextMenu,
   installNavigationGuard,
   safeExternalUrl,
@@ -1297,13 +1299,16 @@ export function registerSlidesIpc(): void {
     )
     return rebuildSlide(session, op.slideIndex)
   })
-  // ── Cloud single-page generation (gsk slide_generate): brief → cloud HTML+conversion → one-slide
-  // pptx saved to a temp file. Returns a marker string that flows through the same pagesHtml slots
-  // as locally generated HTML; slides:html-to-pptx recognizes it and reads the bytes instead of
-  // converting. Enabled when gsk is logged in; GENOFFICE_CLOUD_SLIDE=0 is the kill switch.
-  const cloudSlideEnabled = () => process.env.GENOFFICE_CLOUD_SLIDE !== '0' && !!gskApiKey()
+  // ── Cloud / local single-page generation:
+  // Prefer Genspark slide_generate when gsk is logged in; otherwise build a
+  // local one-slide pptx from the planned title/brief so generate_deck works
+  // with custom providers (no Genspark login). GENOFFICE_CLOUD_SLIDE=0 kills both.
+  const cloudSlideEnabled = () => process.env.GENOFFICE_CLOUD_SLIDE !== '0'
 
-  ipcMain.handle('slides:cloud-gen-status', () => ({ enabled: cloudSlideEnabled() }))
+  ipcMain.handle('slides:cloud-gen-status', () => ({
+    enabled: cloudSlideEnabled(),
+    mode: gskApiKey() ? 'cloud' : 'local',
+  }))
 
   ipcMain.handle(
     'slides:cloud-page-generate',
@@ -1318,31 +1323,60 @@ export function registerSlidesIpc(): void {
         width?: number
         height?: number
       },
-    ): Promise<{ ok: boolean; marker?: string; error?: string }> => {
+    ): Promise<{ ok: boolean; marker?: string; error?: string; mode?: 'cloud' | 'local' }> => {
       if (!cloudSlideEnabled()) return { ok: false, error: 'cloud slide generation is disabled' }
       try {
-        // ultra = opus-class model, matching the local path's quality tier; GENOFFICE_CLOUD_SLIDE_TIER=standard opts down
-        const tier = process.env.GENOFFICE_CLOUD_SLIDE_TIER === 'standard' ? 'standard' : 'ultra'
         const started = Date.now()
-        const { bytes, model } = await gskSlideGenerate({
-          tier,
-          brief: String(op.brief ?? ''),
-          title: op.title ? String(op.title) : undefined,
-          styleSkill: op.styleSkill ? String(op.styleSkill) : undefined,
-          deckContext: op.deckContext,
-          images: Array.isArray(op.images) ? op.images : undefined,
-          width: op.width,
-          height: op.height,
-        })
+        let bytes: Uint8Array
+        let mode: 'cloud' | 'local' = 'local'
+        let model = 'local'
+
+        if (gskApiKey()) {
+          // ultra = opus-class model, matching the local path's quality tier; GENOFFICE_CLOUD_SLIDE_TIER=standard opts down
+          const tier = process.env.GENOFFICE_CLOUD_SLIDE_TIER === 'standard' ? 'standard' : 'ultra'
+          const result = await gskSlideGenerate({
+            tier,
+            brief: String(op.brief ?? ''),
+            title: op.title ? String(op.title) : undefined,
+            styleSkill: op.styleSkill ? String(op.styleSkill) : undefined,
+            deckContext: op.deckContext,
+            images: Array.isArray(op.images) ? op.images : undefined,
+            width: op.width,
+            height: op.height,
+          })
+          bytes = result.bytes
+          model = result.model
+          mode = 'cloud'
+        } else {
+          bytes = await buildLocalSlidePptx({
+            brief: String(op.brief ?? ''),
+            title: op.title ? String(op.title) : undefined,
+            styleSkill: op.styleSkill ? String(op.styleSkill) : undefined,
+            images: Array.isArray(op.images) ? op.images : undefined,
+            fetchImage: async (url) => {
+              try {
+                const resp = await fetchRemoteImage(url)
+                if (!resp || !resp.ok) return null
+                const buf = new Uint8Array(await resp.arrayBuffer())
+                const ct = resp.headers.get('content-type') ?? ''
+                const ext = ct.includes('png') ? 'png' : ct.includes('gif') ? 'gif' : 'jpg'
+                return { bytes: buf, ext }
+              } catch {
+                return null
+              }
+            },
+          })
+        }
+
         console.log(
-          `[cloud-slide] page generated: tier=${tier} model=${model} bytes=${bytes.length} ms=${Date.now() - started}`,
+          `[cloud-slide] page generated: mode=${mode} model=${model} bytes=${bytes.length} ms=${Date.now() - started}`,
         )
         const dir = join(app.getPath('temp'), 'genoffice-cloud-pages')
         mkdirSync(dir, { recursive: true })
         const path = join(dir, `${randomUUID()}.pptx`)
         await writeFile(path, bytes)
         issuedCloudPages.add(path)
-        return { ok: true, marker: CLOUD_PAGE_PREFIX + path }
+        return { ok: true, marker: CLOUD_PAGE_PREFIX + path, mode }
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }

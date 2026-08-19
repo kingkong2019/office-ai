@@ -28,7 +28,8 @@ export type {
   AiStreamRequest,
   GenSparkAccountStatus,
 } from '@genoffice/ai-provider'
-export { AI_PROVIDERS } from '@genoffice/ai-provider'
+// Browser-safe provider list (avoid pulling Node config-node via package barrel)
+export { AI_PROVIDERS } from '../../../../packages/ai-provider/src/providers-meta'
 export type { AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
 
 export type UiTheme = 'light' | 'dark' | 'system'
@@ -1052,9 +1053,9 @@ export interface SlidesApi {
       })
     | { error: string }
   >
-  /** Whether cloud single-page generation (gsk slide_generate) is available (GENOFFICE_CLOUD_SLIDE=1 + gsk login) */
-  cloudGenStatus: () => Promise<{ enabled: boolean }>
-  /** Cloud single-page generation: brief → one-slide pptx temp file; the marker goes into an htmlToPptx pagesHtml slot in place of HTML */
+  /** Whether page generation is available (GENOFFICE_CLOUD_SLIDE≠0). mode=cloud when gsk logged in, else local fallback */
+  cloudGenStatus: () => Promise<{ enabled: boolean; mode?: 'cloud' | 'local' }>
+  /** Single-page generation: brief → one-slide pptx temp file; marker goes into htmlToPptx. Uses Genspark cloud when logged in, otherwise a local layout fallback. */
   cloudGeneratePage: (op: {
     brief: string
     title?: string

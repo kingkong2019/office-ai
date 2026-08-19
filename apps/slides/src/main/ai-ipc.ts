@@ -10,8 +10,8 @@ import { join } from 'node:path'
 import {
   AiCreditsError,
   AiTimeoutError,
-  defaultAiSettings,
-  resolveAiSettings,
+  loadAiApiConfig,
+  loadResolvedAiSettings,
   setRescueFetch,
   streamForProvider,
   type AiSettings,
@@ -59,13 +59,18 @@ const activeAiStreams = new Map<string, AbortController>()
 export function registerAiIpc(): void {
   // Node fetch (undici) direct connections get reset under VPN/tun setups; retry over Chromium's stack
   setRescueFetch((url, init) => net.fetch(url, init))
+  const repoRoot = join(app.getAppPath(), '..', '..')
+  loadAiApiConfig({
+    userDataDir: app.getPath('userData'),
+    searchRoots: [repoRoot],
+  })
 
   ipcMain.handle('ai:get-settings', (): AiSettings => {
     const stored = readJson<Partial<AiSettings> & LegacyAiSettings>(AI_SETTINGS_PATH(), {})
-    const settings = resolveAiSettings(stored, defaultAiSettings())
-    // AI features all go through Genspark (gsk login); stored settings that chose another provider are normalized back
-    settings.provider = 'genspark'
-    return settings
+    return loadResolvedAiSettings(stored, {
+      userDataDir: app.getPath('userData'),
+      searchRoots: [repoRoot],
+    })
   })
 
   // Genspark account (gsk login state): the auth source for AI features; when logged out the frontend uses this to guide login

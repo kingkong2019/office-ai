@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { resetAiApiConfigForTests } from '../src/config'
 import { AI_PROVIDERS, defaultAiSettings, resolveAiSettings } from '../src/providers'
+
+beforeEach(() => {
+  resetAiApiConfigForTests()
+})
+afterEach(() => {
+  resetAiApiConfigForTests()
+})
 
 describe('defaultAiSettings', () => {
   it('gives every provider its default model and an empty key by default', () => {

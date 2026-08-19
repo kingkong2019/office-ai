@@ -1,7 +1,13 @@
 import type { AgentMessage, AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
 import { aiFetch } from './fetch'
 import { httpBodyDetail } from './http-error'
-import { GENSPARK_LLM_BASE_URLS, gensparkAttributionHeaders } from './providers'
+import {
+  GENSPARK_LLM_BASE_URLS,
+  PROVIDER_BASE_URLS,
+  applyAiApiConfigEndpoints,
+  gensparkAttributionHeaders,
+  resolveProviderBaseUrl,
+} from './providers'
 import type { AiProviderConfig, AiProviderId } from './types'
 import { createStreamWatchdog, type StreamWatchdog } from './watchdog'
 
@@ -838,11 +844,6 @@ async function openAiCompatibleTurn(
   if (stopReason) cb.onStopReason?.(stopReason)
 }
 
-const OPENAI_COMPATIBLE_BASE_URLS: Partial<Record<AiProviderId, string>> = {
-  deepseek: 'https://api.deepseek.com/v1',
-  openai: 'https://api.openai.com/v1',
-}
-
 /** route a streaming, tool-calling-capable turn by provider id */
 export async function streamForProvider(
   provider: AiProviderId,
@@ -853,6 +854,7 @@ export async function streamForProvider(
   maxTokens: number,
   cb: StreamCallbacks,
 ): Promise<void> {
+  applyAiApiConfigEndpoints()
   switch (provider) {
     case 'genspark':
       // The proxy exposes three protocol-specific endpoints; route by model id prefix: claude uses
@@ -889,23 +891,36 @@ export async function streamForProvider(
         cb,
       )
     case 'anthropic':
-      return streamAnthropic(config, system, messages, tools, maxTokens, cb)
-    case 'gemini':
-      return streamGemini(config, system, messages, tools, maxTokens, cb)
-    case 'deepseek':
-    case 'openai':
-      return streamOpenAiCompatible(
-        OPENAI_COMPATIBLE_BASE_URLS[provider]!,
+      return streamAnthropic(
         config,
         system,
         messages,
         tools,
         maxTokens,
         cb,
+        resolveProviderBaseUrl('anthropic', config.baseUrl) ?? PROVIDER_BASE_URLS.anthropic,
       )
-    case 'custom':
-      if (!config.baseUrl) throw new Error('A custom provider requires a Base URL')
-      return streamOpenAiCompatible(config.baseUrl, config, system, messages, tools, maxTokens, cb)
+    case 'gemini':
+      return streamGemini(
+        config,
+        system,
+        messages,
+        tools,
+        maxTokens,
+        cb,
+        resolveProviderBaseUrl('gemini', config.baseUrl) ?? PROVIDER_BASE_URLS.gemini,
+      )
+    case 'deepseek':
+    case 'openai': {
+      const baseUrl = resolveProviderBaseUrl(provider, config.baseUrl)
+      if (!baseUrl) throw new Error(`No base URL configured for provider: ${provider}`)
+      return streamOpenAiCompatible(baseUrl, config, system, messages, tools, maxTokens, cb)
+    }
+    case 'custom': {
+      const baseUrl = resolveProviderBaseUrl('custom', config.baseUrl)
+      if (!baseUrl) throw new Error('A custom provider requires a Base URL')
+      return streamOpenAiCompatible(baseUrl, config, system, messages, tools, maxTokens, cb)
+    }
     default:
       throw new Error(`Unknown provider: ${provider}`)
   }

@@ -654,8 +654,8 @@ export function AiPanel({
             }
             return next
           })
-          // Signed-out failures get an inline sign-in button; detected via
-          // gsk status rather than matching the localized error text
+          // Only prompt Genspark login when the active provider is genspark
+          if (settingsRef.current.provider !== 'genspark') return
           void window.desktop
             .aiGskStatus()
             .then((status) => {
