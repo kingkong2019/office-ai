@@ -1,12 +1,18 @@
-# [GenOffice](https://genoffice.ai/)
+# [GenOffice](https://genoffice.ai/) (office-ai fork)
 
 **The world's first full-featured open-source AI Office suite.**
 
-[![License: Apache-2.0](https://img.shields.io/github/license/genspark-ai/genoffice)](LICENSE)
-[![Latest release](https://img.shields.io/github/v/release/genspark-ai/genoffice)](https://github.com/genspark-ai/genoffice/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/genspark-ai/genoffice/total)](https://github.com/genspark-ai/genoffice/releases)
+This repository ([kingkong2019/office-ai](https://github.com/kingkong2019/office-ai))
+is an archived fork of upstream
+[genspark-ai/genoffice](https://github.com/genspark-ai/genoffice) with local
+AI-provider configuration and offline-friendly slide page generation. Upstream
+behavior (Genspark login + cloud tools) still works when you leave the custom
+config unset.
 
-[Website](https://genoffice.ai/) · [Download](https://github.com/genspark-ai/genoffice/releases/latest) · [Demo](https://www.youtube.com/watch?v=B2pLdMX95v4)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Upstream releases](https://img.shields.io/github/v/release/genspark-ai/genoffice)](https://github.com/genspark-ai/genoffice/releases/latest)
+
+[Website](https://genoffice.ai/) · [Upstream downloads](https://github.com/genspark-ai/genoffice/releases/latest) · [Demo](https://www.youtube.com/watch?v=B2pLdMX95v4) · [This fork](https://github.com/kingkong2019/office-ai)
 
 GenOffice is a free, open-source alternative to Microsoft Office for macOS,
 Windows, and Linux, built around AI editing as a first-class workflow rather
@@ -29,7 +35,9 @@ layer.
 - **PowerPoint-compatible presentations** — in-house `.pptx` engine with masters, layouts, smart guides, non-destructive crop.
 - **Markdown to Word, fully local** — the same OOXML engine, no Pandoc, no cloud.
 - **AI that edits documents** — block-level edits with snapshots and diffs, document-aware agents.
-- **Agent tools built in** — web/image search, image generation, media analysis.
+- **Bring your own LLM** — point Docs / Sheets / Slides at OpenAI-compatible, Anthropic, or custom endpoints via `ai-api.config.json` (no Genspark login required).
+- **Local slide page generation** — `generate_deck` can build pages locally when Genspark cloud `slide_generate` is unavailable.
+- **Agent tools built in** — web/image search, image generation, media analysis (Genspark account when using those tools).
 - **Light / dark / system themes.**
 - **macOS, Windows, Linux.**
 - **Free & open-source (Apache-2.0).**
@@ -93,13 +101,67 @@ tokens (`packages/ui`), with a CI guard that keeps chrome colors on the token
 system. Document surfaces stay light in dark mode — Word-style dark chrome
 around white paper — so files render and export identically in both themes.
 
-**AI backend (Genspark).** The apps sign in to a Genspark account through a
-device-code flow; no model API key is entered or stored by the user. Model
-calls route through the Genspark proxy (Claude, GPT, and Gemini families).
-The same account also unlocks the Genspark ("gsk") tool endpoints the agents
-build on — web and image search, image generation and editing,
-image/audio/video analysis, and audio transcription — all reachable through
-`packages/ai-search` for anyone extending the agent layer.
+**AI backend.** Two modes:
+
+1. **Genspark (upstream default)** — device-code sign-in; model calls route
+   through the Genspark proxy (Claude, GPT, Gemini). The same account unlocks
+   gsk tools (web/image search, image gen/edit, media analysis, transcription)
+   via `packages/ai-search`.
+2. **Custom providers (this fork)** — drop an `ai-api.config.json` next to the
+   repo (or under Electron `userData`) and set `defaultProvider` /
+   `allowNonGensparkProvider` so chat uses your own API key and base URL.
+   See [Custom AI API config](#custom-ai-api-config) below.
+
+## Custom AI API config
+
+Copy the example and edit secrets locally (the real config file is gitignored):
+
+```bash
+cp ai-api.config.example.json ai-api.config.json
+```
+
+Minimal shape:
+
+```json
+{
+  "defaultProvider": "custom",
+  "allowNonGensparkProvider": true,
+  "providers": {
+    "custom": {
+      "label": "My LLM",
+      "baseUrl": "http://127.0.0.1:8000/v1",
+      "apiKey": "sk-your-key",
+      "defaultModel": "my-model",
+      "models": ["my-model", "my-model-fast"]
+    }
+  }
+}
+```
+
+**Load order** (`packages/ai-provider` → `config-node.ts`):
+
+1. `GENOFFICE_AI_CONFIG` — path to a config file  
+2. `<Electron userData>/ai-api.config.json`  
+3. monorepo / search roots (so `npm run dev` from `apps/shell` still finds the repo-root file)  
+4. `<cwd>/ai-api.config.json`
+
+`npm run dev` sets `GENOFFICE_AI_CONFIG` to the monorepo root config when present.
+Provider metadata and streaming live in `packages/ai-provider`; renderer code
+imports `providers-meta` only (no Node `fs`).
+
+### Local slide page generation
+
+Slides `generate_deck` / single-page generation:
+
+- If a Genspark (gsk) session is available → prefer cloud `slide_generate`.
+- Otherwise → **local fallback** (`apps/slides/src/main/local-page-generate.ts`)
+  builds a one-slide `.pptx` from the planned title/brief so decks still work
+  with custom providers.
+- Set `GENOFFICE_CLOUD_SLIDE=0` to disable both cloud and local page generation.
+- Optional: `GENOFFICE_CLOUD_SLIDE_TIER=standard` when using the cloud path.
+
+Successful runs log:
+`[cloud-slide] page generated: mode=local|cloud ...`
 
 ## Engine packages
 
@@ -113,8 +175,9 @@ All pure TypeScript, no Electron dependency, unit-tested (except the UI kit):
   text formats).
 - `packages/agent-core` — the AI agent loop and skill composition shared by
   every app.
-- `packages/ai-provider` — provider abstraction and streaming for the model
-  backends.
+- `packages/ai-provider` — provider abstraction, streaming, and
+  `ai-api.config.json` loading (`config.ts` / `config-node.ts` /
+  `providers-meta.ts`).
 - `packages/ai-search` — Genspark auth + web/image search tools.
 - `packages/i18n`, `packages/ui`, `packages/project-store`,
   `packages/electron-utils` — shared i18n core, React UI kit, recent-files
@@ -170,8 +233,15 @@ back byte-for-byte, so documents keep working in Microsoft Office.
 
 **Does GenOffice work offline?**
 Document editing is fully local — files never leave your machine to be
-opened, edited, or saved. The AI features (agents, search, image tools) sign
-in to a Genspark account and need a network connection.
+opened, edited, or saved. With a custom provider pointed at a local OpenAI-
+compatible server, chat can stay on your LAN. Genspark sign-in, gsk agent
+tools (search / image / media), and cloud `slide_generate` still need the
+network when you use those paths; local slide page generation does not.
+
+**Do I need a Genspark account?**
+Not for basic AI chat if you configure `ai-api.config.json` with
+`allowNonGensparkProvider: true` and a non-genspark `defaultProvider`. You
+still need Genspark for upstream cloud tools and the cloud slide layout path.
 
 **Can GenOffice edit PDF files?**
 Yes — real PDF text and image editing that rewrites the page content stream
