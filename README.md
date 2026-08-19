@@ -1,75 +1,65 @@
 # Office AI
 
-**AI-native office suite** — a public fork of [GenOffice](https://github.com/genspark-ai/genoffice).
-See **[Why Office AI](#why-office-ai-highlights)** for numbered highlights (BYO LLM, local slides, offline docs, and more).
+> Open-source AI office suite · fork of [GenOffice](https://github.com/genspark-ai/genoffice) · BYO LLM · local slides
 
-[English](./README.md) · [中文](./README.zh-CN.md)
+**English** · [中文](./README.zh-CN.md) · [Repo](https://github.com/kingkong2019/office-ai) · [Upstream](https://github.com/genspark-ai/genoffice) · [Demo](https://www.youtube.com/watch?v=B2pLdMX95v4)
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Upstream GenOffice](https://img.shields.io/github/v/release/genspark-ai/genoffice?label=upstream)](https://github.com/genspark-ai/genoffice/releases/latest)
+[![Upstream](https://img.shields.io/github/v/release/genspark-ai/genoffice?label=upstream%20GenOffice)](https://github.com/genspark-ai/genoffice/releases/latest)
+[![Node](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen)](package.json)
 
-**Repo:** [kingkong2019/office-ai](https://github.com/kingkong2019/office-ai)  
-**Upstream:** [genspark-ai/genoffice](https://github.com/genspark-ai/genoffice) · [genoffice.ai](https://genoffice.ai/) · [Demo](https://www.youtube.com/watch?v=B2pLdMX95v4)
+---
 
-## Why Office AI (highlights)
+## Why Office AI
 
-1. **Bring your own LLM** — Point Docs / Sheets / Slides at OpenAI-compatible, Anthropic, or any custom OpenAI-style gateway via one `ai-api.config.json`. Chat works **without** a Genspark login.
-2. **Local slide page generation** — When cloud `slide_generate` is unavailable, `generate_deck` still builds pages locally from the planned title/brief, so decks are not blocked on cloud layout.
-3. **True offline document work** — Open / edit / save `.docx` / `.xlsx` / `.pptx` / PDF / Markdown entirely on your machine; pair with a LAN or localhost model for AI that never leaves your network.
-4. **Byte-preserving Office fidelity** — Only dirty parts are rewritten; untouched OOXML bytes survive the round trip, so files stay friendly to Microsoft Office.
-5. **Real PDF editing** — Rewrite page content streams (text + images) with original fonts — not stamp-over annotations.
-6. **One suite, five editors** — Word / Excel / PowerPoint / PDF / Markdown in a single Electron shell, sharing the same AI panel and agent loop.
-7. **Upstream-compatible, fork-branded** — Keep Genspark cloud tools when you want them; keep `@genoffice/*` packages for easy sync; ship as **Office AI** (installers, window title, GitHub links).
+| # | Highlight | In one line |
+| - | --------- | ----------- |
+| **1** | **Bring your own LLM** | One `ai-api.config.json` → OpenAI-compatible / Anthropic / custom gateway — **no Genspark login for chat** |
+| **2** | **Local slide pages** | If cloud `slide_generate` is down, `generate_deck` still builds pages from title / brief **locally** |
+| **3** | **Offline documents** | Edit Office / PDF / Markdown on-device; point AI at a LAN or localhost model |
+| **4** | **Byte-preserving fidelity** | Only dirty OOXML is rewritten — Microsoft Office stays happy |
+| **5** | **Real PDF editing** | Rewrite content streams (text + images), keep original fonts — not stamp overlays |
+| **6** | **One shell, five editors** | Word / Excel / PowerPoint / PDF / Markdown + shared AI panel & agent |
+| **7** | **Upstream-ready brand** | Optional Genspark cloud tools; ship as **Office AI**; keep `@genoffice/*` for sync |
 
-Internal npm package names remain `@genoffice/*` for easier upstream sync. The
-**product display name**, installers, GitHub links, and default folders use **Office AI**.
+---
 
-## Features (inherited engine)
+## Quick start
 
-- **Real PDF editing** — retype text and edit images in the page itself, original fonts preserved.
-- **Microsoft Word–compatible, byte-preserving `.docx` editing** — only what you touched changes.
-- **Word-faithful pagination** — page breaks land where Word puts them.
-- **Excel-compatible spreadsheets** — in-house engine with a Rust `.xlsx` sidecar, charts, pivot tables, slicers.
-- **PowerPoint-compatible presentations** — in-house `.pptx` engine with masters, layouts, smart guides.
-- **Markdown to Word, fully local** — same OOXML engine, no Pandoc, no cloud.
-- **AI that edits documents** — block-level edits with snapshots and diffs.
-- **Agent tools** — web/image search, image generation, media analysis (Genspark account when using those tools).
-- **Light / dark / system themes · macOS / Windows / Linux · Apache-2.0.**
+```bash
+git clone https://github.com/kingkong2019/office-ai.git
+cd office-ai
+cp ai-api.config.example.json ai-api.config.json   # add your API key
+npm install
+npm run dev
+```
 
-## Download
+Package: `npm run dist:mac` · `dist:win` · `dist:linux`  
+Artifacts: `OfficeAI-*.dmg` / `.exe` / `.AppImage`, `office-ai_*.deb` / `.rpm`
 
-Prebuilt installers are published by **upstream GenOffice** today. Build from this
-repo with `npm run dist:mac` / `dist:win` / `dist:linux` to produce **Office AI**
-artifacts (`OfficeAI-*.dmg` / `.exe` / `.AppImage`, `office-ai_*.deb` / `.rpm`).
+> Sheets needs `cargo` (Rust) on `PATH`.
 
-Upstream binaries (still branded GenOffice):
-
-| Platform | Download |
-| -------- | -------- |
-| **macOS** arm64 | [GenOffice-0.6.389-arm64.dmg](https://github.com/genspark-ai/genoffice/releases/download/v0.6.389/GenOffice-0.6.389-arm64.dmg) |
-| **macOS** x64 | [GenOffice-0.6.389.dmg](https://github.com/genspark-ai/genoffice/releases/download/v0.6.389/GenOffice-0.6.389.dmg) |
-| **Windows** x64 | [GenOfficeSetup-v0.6.389.exe](https://github.com/genspark-ai/genoffice/releases/download/v0.6.389/GenOfficeSetup-v0.6.389.exe) |
-| **Linux** deb | [genoffice_0.6.389_amd64.deb](https://github.com/genspark-ai/genoffice/releases/download/v0.6.389/genoffice_0.6.389_amd64.deb) |
-| **Linux** rpm | [genoffice-0.6.389.x86_64.rpm](https://github.com/genspark-ai/genoffice/releases/download/v0.6.389/genoffice-0.6.389.x86_64.rpm) |
-| **Linux** AppImage | [GenOffice-0.6.389.AppImage](https://github.com/genspark-ai/genoffice/releases/download/v0.6.389/GenOffice-0.6.389.AppImage) |
+---
 
 ## Apps
 
-| App | Product | What it is |
-| --- | ------- | ---------- |
-| `apps/docs` | **Office AI Docs** | `.docx` word processor with byte-preserving round trip. |
-| `apps/sheets` | **Office AI Sheets** | `.xlsx` spreadsheet (Univer UI + Rust sidecar). |
-| `apps/slides` | **Office AI Slides** | `.pptx` presentations. |
-| `apps/pdf` | **Office AI PDF** | True PDF text/image editing. |
-| `apps/markdown` | **Office AI Markdown** | Markdown editor in shell tabs. |
-| `apps/shell` | **Office AI** | Suite shell: home, tabs, theme, updates. |
+| Path | Product | Role |
+| ---- | ------- | ---- |
+| `apps/docs` | **Office AI Docs** | `.docx` byte-preserving round trip |
+| `apps/sheets` | **Office AI Sheets** | `.xlsx` (Univer + Rust sidecar) |
+| `apps/slides` | **Office AI Slides** | `.pptx` + local / cloud page gen |
+| `apps/pdf` | **Office AI PDF** | True PDF text / image editing |
+| `apps/markdown` | **Office AI Markdown** | Markdown in shell tabs |
+| `apps/shell` | **Office AI** | Home · tabs · theme · updates |
 
-**AI backend.** Two modes:
+**AI backend**
 
-1. **Genspark (upstream default)** — device-code sign-in; models and gsk tools via Genspark.
-2. **Custom providers (this fork)** — `ai-api.config.json` with `defaultProvider` / `allowNonGensparkProvider`. See below.
+1. **Genspark (upstream default)** — device-code login; models & gsk tools in the cloud  
+2. **Custom providers (this fork)** — `ai-api.config.json` + `allowNonGensparkProvider`
 
-## Custom AI API config
+---
+
+## Custom AI config
 
 ```bash
 cp ai-api.config.example.json ai-api.config.json
@@ -91,55 +81,70 @@ cp ai-api.config.example.json ai-api.config.json
 }
 ```
 
-**Load order** (`packages/ai-provider` → `config-node.ts`):
+**Load order**
 
-1. `GENOFFICE_AI_CONFIG`
-2. `<Electron userData>/ai-api.config.json`
-3. monorepo / search roots
+1. `GENOFFICE_AI_CONFIG`  
+2. `<userData>/ai-api.config.json`  
+3. monorepo / search roots  
 4. `<cwd>/ai-api.config.json`
 
-### Local slide page generation
+### Local slide pages
 
-- Genspark (gsk) session → prefer cloud `slide_generate`
-- Otherwise → local fallback (`apps/slides/src/main/local-page-generate.ts`)
-- `GENOFFICE_CLOUD_SLIDE=0` disables both
-- Optional: `GENOFFICE_CLOUD_SLIDE_TIER=standard` on the cloud path
+| When | Behavior |
+| ---- | -------- |
+| gsk session present | Prefer cloud `slide_generate` |
+| no gsk | Local fallback (`local-page-generate.ts`) |
+| `GENOFFICE_CLOUD_SLIDE=0` | Disable cloud **and** local page gen |
 
-## Development
+---
 
-```bash
-npm install
-npm run fixtures
-npm test
-npm run typecheck
-npm run dev
-npm run dist:mac   # / dist:win / dist:linux
-```
+## Engine (from upstream)
 
-Sheets needs a Rust toolchain (`cargo` on PATH).
+- Real PDF editing · byte-preserving `.docx` · Word-like pagination  
+- Excel / PowerPoint compatible · local Markdown → Word  
+- Document AI + agents (Genspark account for search / image tools)  
+- Light / dark / system · macOS / Windows / Linux · Apache-2.0  
 
-## Branding note
+### Upstream downloads (still branded GenOffice)
+
+| Platform | Link |
+| -------- | ---- |
+| **macOS** arm64 | [dmg](https://github.com/genspark-ai/genoffice/releases/download/v0.6.389/GenOffice-0.6.389-arm64.dmg) |
+| **macOS** x64 | [dmg](https://github.com/genspark-ai/genoffice/releases/download/v0.6.389/GenOffice-0.6.389.dmg) |
+| **Windows** x64 | [exe](https://github.com/genspark-ai/genoffice/releases/download/v0.6.389/GenOfficeSetup-v0.6.389.exe) |
+| **Linux** deb / rpm / AppImage | [deb](https://github.com/genspark-ai/genoffice/releases/download/v0.6.389/genoffice_0.6.389_amd64.deb) · [rpm](https://github.com/genspark-ai/genoffice/releases/download/v0.6.389/genoffice-0.6.389.x86_64.rpm) · [AppImage](https://github.com/genspark-ai/genoffice/releases/download/v0.6.389/GenOffice-0.6.389.AppImage) |
+
+Build **Office AI** branded installers from this repo with `dist:*` above.
+
+---
+
+## Branding
 
 | Surface | This fork |
 | ------- | --------- |
-| Display name / window title | Office AI |
-| Installers / Linux package | `OfficeAI-*`, `office-ai` |
+| Display / window title | **Office AI** |
+| Installers / Linux package | `OfficeAI-*` · `office-ai` |
 | Default documents folder | `~/Documents/Office AI` |
-| GitHub / Star links | [kingkong2019/office-ai](https://github.com/kingkong2019/office-ai) |
-| npm workspaces | still `@genoffice/*` (intentional) |
+| GitHub / Star | [kingkong2019/office-ai](https://github.com/kingkong2019/office-ai) |
+| npm workspaces | `@genoffice/*` (kept on purpose) |
 
-GenOffice and Genspark names/logos remain trademarks of Mainfunc, Inc. This fork
-uses **Office AI** as its product name and credits upstream GenOffice.
+GenOffice / Genspark are trademarks of Mainfunc, Inc. This fork ships as **Office AI** and credits upstream.
+
+---
 
 ## FAQ
 
-**Is this free?** Yes — Apache-2.0, same as upstream (except `ee/` enterprise license).
+**Free?**  
+Yes — Apache-2.0 (except [`ee/` enterprise license](ee/LICENSE)).
 
-**Do I need a Genspark account?** Not for basic chat if you configure a custom provider. Cloud tools and cloud slide layout still need Genspark.
+**Need a Genspark account?**  
+Not for basic chat with a custom provider. Cloud tools and cloud slide layout still do.
 
-**Offline?** Document editing is local. Custom providers can point at a LAN LLM. Local slide pages do not need Genspark cloud.
+**Offline?**  
+Document editing is local. Point custom providers at a LAN LLM. Local slide pages do not need Genspark cloud.
+
+---
 
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE). The `ee/` directory uses the
-[GenOffice Enterprise License](ee/LICENSE).
+[Apache License 2.0](LICENSE) · `ee/` → [GenOffice Enterprise License](ee/LICENSE)
